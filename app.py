@@ -10,8 +10,8 @@ st.set_page_config(page_title="PAGE BUILDER V3", layout="wide")
 if "reset_nonce" not in st.session_state:
     st.session_state.reset_nonce = 0
 
-st.title("PAGE BUILDER V3 (통합버전)")
-st.caption("상세페이지 + FAQ + 스텝반응 통합 생성기")
+st.title("PAGE BUILDER V3 (고객고민 자동생성)")
+st.caption("상세페이지 + 고객고민 + FAQ + 스텝반응 통합 생성기")
 
 api_key = st.secrets.get("OPENAI_API_KEY", "")
 if not api_key:
@@ -25,28 +25,33 @@ PROMPT = """
 
 목표:
 - 구매전환이 일어나는 상세페이지 원고 작성
-- 고객의 고민을 해결하는 실전 콘텐츠
+- 고객의 고민을 정확히 짚고 해결하는 콘텐츠 작성
 
-구성:
+구성 순서:
 
-1. 상세페이지 본문
+1. 고객 고민
+- 이 상품을 찾는 고객이 실제로 가질 고민 3~5개 생성
+
+2. 상세페이지 본문
 - 추천 이유
 - 원단
 - 핏
 - 추천 고객
 - 코디 제안
 
-2. 자주 하시는 상품 질문
+3. 자주 하시는 상품 질문
 - 실제 고객 질문 4개 + 답변
 
-3. 먼저 입어본 스텝, 모델 반응
+4. 먼저 입어본 스텝, 모델 반응
 - 후기 스타일 4~5개
 
-4. 이미지 ALT 텍스트 6개
+5. 이미지 ALT 텍스트
+- 6개
 
 규칙:
 - 실무에서 바로 복붙 가능하게 작성
 - 짧고 명확하게
+- 고객 고민 → 본문 → FAQ 흐름이 자연스럽게 이어지도록 작성
 """
 
 def build_prompt(data: Dict[str, str]) -> str:
@@ -83,7 +88,6 @@ with col1:
     detail = st.text_area("디테일", key=f"d{n}")
 
 with col2:
-    problem = st.text_area("고객 고민", key=f"p{n}")
     tpo = st.text_input("착용 상황", key=f"t{n}")
     coordi = st.text_area("코디", key=f"coo{n}")
     target = st.text_input("타겟", value="4050 여성", key=f"ta{n}")
@@ -101,7 +105,6 @@ if st.button("생성하기"):
         "사이즈": size,
         "핏": fit,
         "디테일": detail,
-        "고객고민": problem,
         "TPO": tpo,
         "코디": coordi,
         "타겟": target
@@ -109,15 +112,15 @@ if st.button("생성하기"):
 
     prompt = build_prompt(data)
 
-    res = client.chat.completions.create(
-        model="gpt-4.1",
-        messages=[
-            {"role":"system","content":"구조 유지"},
-            {"role":"user","content":prompt}
-        ]
-    )
-
-    result = res.choices[0].message.content
+    with st.spinner("생성중입니다..."):
+        res = client.chat.completions.create(
+            model="gpt-4.1",
+            messages=[
+                {"role":"system","content":"구조 유지"},
+                {"role":"user","content":prompt}
+            ]
+        )
+        result = res.choices[0].message.content
 
     st.text_area("결과", result, height=900)
 
